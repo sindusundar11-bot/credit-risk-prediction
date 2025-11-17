@@ -1,0 +1,102 @@
+# =============================================================================
+#       CREDIT RISK PREDICTION — FULL COLAB NOTEBOOK (DATA INCLUDED)
+# =============================================================================
+
+# --------------------------------------
+# 1. IMPORT LIBRARIES
+# --------------------------------------
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.ensemble import RandomForestClassifier
+
+# --------------------------------------
+# 2. LOAD BUILT-IN CREDIT RISK DATASET
+# --------------------------------------
+
+# Creating dataset manually (German Credit Risk – 1000 rows)
+url = "https://raw.githubusercontent.com/selva86/datasets/master/GermanCredit.csv"
+df = pd.read_csv(url)
+
+print("Dataset Loaded Successfully!")
+df.head()
+
+# --------------------------------------
+# 3. CHECK FOR NULL VALUES
+# --------------------------------------
+print("\nMissing Values (before preprocessing):")
+print(df.isnull().sum())
+
+# --------------------------------------
+# 4. DATA PREPROCESSING
+# --------------------------------------
+
+# --- Debugging NaN in target variable ---
+print("\nUnique values in 'credit_risk' before mapping:")
+print(df['credit_risk'].unique())
+
+# The 'credit_risk' column already contains 1s and 0s, so mapping with 'Good'/'Bad' is unnecessary and causes NaNs.
+# Removing the line that converts 'Good'/'Bad' to 1/0.
+# df['credit_risk'] = df['credit_risk'].map({'Good': 1, 'Bad': 0})
+
+print("\nUnique values in 'credit_risk' after (intended) mapping:")
+print(df['credit_risk'].unique()) # This will now show [1 0] as it was initially
+print("\nMissing values in 'credit_risk' after (intended) mapping:")
+print(df['credit_risk'].isnull().sum()) # This will now show 0 missing values
+# ----------------------------------------
+
+# One-hot encoding
+df_encoded = pd.get_dummies(df, drop_first=True)
+
+# Split features & target
+X = df_encoded.drop("credit_risk", axis=1)
+y = df_encoded["credit_risk"]
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Scaling
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# --------------------------------------
+# 5. TRAIN THE MODEL
+# --------------------------------------
+model = RandomForestClassifier(n_estimators=200, random_state=42)
+model.fit(X_train, y_train)
+
+# --------------------------------------
+# 6. PREDICTION & ACCURACY
+# --------------------------------------
+y_pred = model.predict(X_test)
+
+print("\nMODEL ACCURACY:", accuracy_score(y_test, y_pred))
+print("\nCONFUSION MATRIX:\n", confusion_matrix(y_test, y_pred))
+print("\nCLASSIFICATION REPORT:\n", classification_report(y_test, y_pred))
+
+# --------------------------------------
+# 7. FEATURE IMPORTANCE PLOT
+# --------------------------------------
+plt.figure(figsize=(12,6))
+importances = model.feature_importances_
+indices = np.argsort(importances)[::-1]
+
+plt.bar(range(len(importances)), importances[indices])
+plt.xticks(range(len(importances)), X.columns[indices], rotation=90)
+plt.title("Feature Importance in Credit Risk Prediction")
+plt.tight_layout()
+plt.show()
+
+# --------------------------------------
+# 8. SAMPLE PREDICTION
+# --------------------------------------
+sample = X_test[:1]
+print("\nSample Input:", sample)
+print("\nPREDICTED CLASS (1 = Good, 0 = Bad):", model.predict(sample))
